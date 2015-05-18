@@ -709,7 +709,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
 
 
-  size_t readbufsize = 128;
+  size_t readbufsize = (!safe_cmp(algorithm->name, "credits"))? 168:128;
 
   if (algorithm->rw_buffer_size < 0) {
     // calc buffer size for neoscrypt

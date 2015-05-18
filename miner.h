@@ -692,6 +692,7 @@ static inline void flip32(void *dest_p, const void *src_p)
     dest[i] = swab32(src[i]);
 }
 
+
 static inline void flip64(void *dest_p, const void *src_p)
 {
   uint32_t *dest = (uint32_t *)dest_p;
@@ -722,6 +723,17 @@ static inline void flip128(void *dest_p, const void *src_p)
     dest[i] = swab32(src[i]);
 }
 
+static inline void flip168(void *dest_p, const void *src_p)
+{
+	uint32_t *dest = (uint32_t *)dest_p;
+	const uint32_t *src = (uint32_t *)src_p;
+	int i;
+
+	for (i = 0; i < 42; i++)
+		dest[i] = swab32(src[i]);
+}
+
+
 /* For flipping to the correct endianness if necessary */
 #if defined(__BIG_ENDIAN__) || defined(MIPSEB)
 static inline void endian_flip32(void *dest_p, const void *src_p)
@@ -733,6 +745,11 @@ static inline void endian_flip128(void *dest_p, const void *src_p)
 {
   flip128(dest_p, src_p);
 }
+static inline void endian_flip168(void *dest_p, const void *src_p)
+{
+	flip168(dest_p, src_p);
+}
+
 #else
 static inline void
 endian_flip32(void __maybe_unused *dest_p, const void __maybe_unused *src_p)
@@ -743,7 +760,12 @@ static inline void
 endian_flip128(void __maybe_unused *dest_p, const void __maybe_unused *src_p)
 {
 }
+static inline void
+endian_flip168(void __maybe_unused *dest_p, const void __maybe_unused *src_p)
+{
+}
 #endif
+
 
 extern double cgpu_runtime(struct cgpu_info *cgpu);
 extern void _quit(int status);
@@ -1405,7 +1427,7 @@ struct pool {
 #define GETWORK_MODE_GBT 'G'
 
 struct work {
-  unsigned char data[128];
+  unsigned char data[168];
   unsigned char midstate[32];
   unsigned char target[32];
   unsigned char hash[32];

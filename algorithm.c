@@ -34,6 +34,7 @@
 #include "algorithm/Lyra2RE.h"
 #include "algorithm/pluck.h"
 #include "algorithm/yescrypt.h"
+#include "algorithm/credits.h"
 
 #include "compat.h"
 
@@ -42,6 +43,7 @@
 bool opt_lyra;
 const char *algorithm_type_str[] = {
   "Unknown",
+  "credits",
   "Scrypt",
   "NScrypt",
   "X11",
@@ -209,6 +211,31 @@ static cl_int queue_pluck_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_un
 	return status;
 }
 
+static cl_int queue_credits_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel = &clState->kernel;
+	unsigned int num = 0;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+
+		// le_target = (*(cl_uint *)(blk->work->device_target + 24));
+	le_target = (cl_ulong)le64toh(((uint64_t *)blk->work->/*device_*/target)[3]);
+	//	le_target = (cl_uint)((uint32_t *)blk->work->target)[6];
+
+
+	memcpy(clState->cldata, blk->work->data, 168);
+//	flip168(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 168, clState->cldata, 0, NULL, NULL);
+
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+	CL_SET_ARG(blk->work->midstate);
+
+	return status;
+}
+
 
 static cl_int queue_yescrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
@@ -276,9 +303,9 @@ static cl_int queue_yescrypt_multikernel(_clState *clState, dev_blk_ctx *blk, __
 	CL_SET_ARG_N(2,clState->buffer2);
 	//mix2_2
 //inactive kernel
-//	num = 0;
-//	CL_NEXTKERNEL_SET_ARG_N(0, clState->buffer1);
-//	CL_SET_ARG_N(1, clState->buffer2);
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG_N(0, clState->buffer1);
+	CL_SET_ARG_N(1, clState->buffer2);
 	//mix2_2
 
 	num = 0;
@@ -287,9 +314,9 @@ static cl_int queue_yescrypt_multikernel(_clState *clState, dev_blk_ctx *blk, __
 	CL_SET_ARG_N(2, clState->buffer2);
 
 	//inactive kernel
-//	num = 0;
-//	CL_NEXTKERNEL_SET_ARG_N(0, clState->buffer1);
-//	CL_SET_ARG_N(1, clState->buffer2);
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG_N(0, clState->buffer1);
+	CL_SET_ARG_N(1, clState->buffer2);
 	//mix2_2
 
 
@@ -846,13 +873,20 @@ static algorithm_settings_t algos[] = {
   A_PLUCK("pluck"),
 #undef A_PLUCK
 
+#define A_CREDITS(a) \
+                { a, ALGO_CRE, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, credits_regenhash, queue_credits_kernel, gen_hash, NULL}
+  A_CREDITS("credits"),
+#undef A_CREDITS
+
+
+
 #define A_YESCRYPT(a) \
               { a, ALGO_YESCRYPT, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, yescrypt_regenhash, queue_yescrypt_kernel, gen_hash, append_neoscrypt_compiler_options}
   A_YESCRYPT("yescrypt"),
 #undef A_YESCRYPT
 
 #define A_YESCRYPT_MULTI(a) \
-                  { a, ALGO_YESCRYPT_MULTI, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 4,-1,CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE , yescrypt_regenhash, queue_yescrypt_multikernel, gen_hash, append_neoscrypt_compiler_options}
+                  { a, ALGO_YESCRYPT_MULTI, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 6,-1,CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE , yescrypt_regenhash, queue_yescrypt_multikernel, gen_hash, append_neoscrypt_compiler_options}
   A_YESCRYPT_MULTI("yescrypt-multi"),
 #undef A_YESCRYPT_MULTI
 

@@ -25,7 +25,7 @@ typedef struct __clState {
   cl_mem buffer1;
   cl_mem buffer2;
   cl_mem buffer3;
-  unsigned char cldata[80];
+  unsigned char cldata[168];
   bool hasBitAlign;
   bool goffset;
   cl_uint vwidth;
